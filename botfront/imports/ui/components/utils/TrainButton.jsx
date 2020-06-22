@@ -3,65 +3,119 @@ import PropTypes from 'prop-types';
 import { Meteor } from 'meteor/meteor';
 import { withTracker } from 'meteor/react-meteor-data';
 
-import { Button, Popup } from 'semantic-ui-react';
+import {
+    Button, Popup, Icon, Checkbox,
+} from 'semantic-ui-react';
 import { wrapMeteorCallback } from './Errors';
 import { isTraining } from '../../../api/nlu_model/nlu_model.utils';
 import { StoryGroups } from '../../../api/storyGroups/storyGroups.collection';
 
-
 class TrainButton extends React.Component {
+    copyToClipboard = () => {
+        const { projectId } = this.props;
+        const dummy = document.createElement('textarea');
+        document.body.appendChild(dummy);
+        dummy.value = `${window.location.origin.toString()}/chat/${projectId}/`;
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+    }
+
     train = () => {
         const { instance, projectId } = this.props;
         Meteor.call('project.markTrainingStarted', projectId);
         Meteor.call('rasa.train', projectId, instance, wrapMeteorCallback());
-    }
+    };
 
-    renderButton = (project, instance, popupContent) => (
-        !popupContent ? (
-            <Button
-                color='blue'
-                icon='grid layout'
-                content='Train everything'
-                labelPosition='left'
-                disabled={isTraining(project) || !instance}
-                loading={isTraining(project)}
-                onClick={this.train}
-                compact
-                data-cy='train-button'
-            />
-        ) : (
+    renderButton = (project, instance, popupContent) => (!popupContent ? (
+        <Button
+            color='blue'
+            icon='grid layout'
+            content='Train everything'
+            labelPosition='left'
+            disabled={isTraining(project) || !instance}
+            loading={isTraining(project)}
+            onClick={this.train}
+            compact
+            data-cy='train-button'
+        />
+    ) : (
+        <Popup
+            content={popupContent}
+            trigger={(
+                <Button
+                    color='yellow'
+                    icon='eye'
+                    content='Partial training'
+                    labelPosition='left'
+                    disabled={isTraining(project) || !instance}
+                    loading={isTraining(project)}
+                    onClick={this.train}
+                    data-cy='train-button'
+                />
+            )}
+            // Popup is disabled while training
+            disabled={project.training && project.training.status === 'training'}
+            inverted
+            size='tiny'
+        />
+    ));
+
+    renderShareLink = () => {
+        const {
+            project: { enableSharing, _id: projectId },
+        } = this.props;
+        return (
             <Popup
-                content={popupContent}
-                trigger={
-                    (
-                        <Button
-                            color='yellow'
-                            icon='eye'
-                            content='Partial training'
-                            labelPosition='left'
-                            disabled={isTraining(project) || !instance}
-                            loading={isTraining(project)}
-                            onClick={this.train}
-                            data-cy='train-button'
+                trigger={(
+                    <Icon
+                        name='mail forward'
+                        color='grey'
+                        size='large'
+                        link
+                        style={{ marginBottom: '5px' }}
+                    />
+                )}
+                hoverable
+                content={(
+                    <div>
+                        <Checkbox
+                            toggle
+                            checked={enableSharing}
+                            onChange={() => Meteor.call(
+                                'project.setEnableSharing',
+                                projectId,
+                                !enableSharing,
+                            )
+                            }
+                            label={enableSharing ? 'Sharing enabled' : 'Sharing disabled'}
                         />
-                    )
-                }
-                // Popup is disabled while training
-                disabled={project.training && project.training.status === 'training'}
-                inverted
-                size='tiny'
+                        {enableSharing && (
+                            <p>
+                                <br />
+                                <button type='button' className='link-like' onClick={this.copyToClipboard}>
+                                    <Icon name='linkify' /> Copy link
+                                </button>
+                            </p>
+                        )}
+                    </div>
+                )}
             />
-        )
-    );
+        );
+    };
 
     render() {
         const {
-            project,
-            instance,
-            popupContent,
-            ready,
+            project, instance, popupContent, ready,
         } = this.props;
-        return ready && this.renderButton(project, instance, popupContent);
+        return (
+            ready && (
+                <div>
+                    {this.renderButton(project, instance, popupContent)}
+                    {this.renderShareLink()}
+                </div>
+            )
+        );
     }
 }
 
@@ -88,12 +142,15 @@ export default withTracker((props) => {
     let popupContent;
     if (ready) {
         storyGroups = StoryGroups.find({ projectId }, { field: { _id: 1 } }).fetch();
-        selectedStoryGroups = storyGroups.filter(storyGroup => (storyGroup.selected));
+        selectedStoryGroups = storyGroups.filter(storyGroup => storyGroup.selected);
 
-        if (selectedStoryGroups && selectedStoryGroups.length > 1) popupContent = `Train NLU and stories from ${selectedStoryGroups.length} focused story groups.`;
-        else if (selectedStoryGroups && selectedStoryGroups.length === 1) popupContent = 'Train NLU and stories from 1 focused story group.';
+        if (selectedStoryGroups && selectedStoryGroups.length > 1) {
+            popupContent = `Train NLU and stories from ${selectedStoryGroups.length} focused story groups.`;
+        } else if (selectedStoryGroups && selectedStoryGroups.length === 1) {
+            popupContent = 'Train NLU and stories from 1 focused story group.';
+        }
     }
-    
+
     return {
         ready,
         popupContent,
