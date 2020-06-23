@@ -417,11 +417,12 @@ NluDataTable.propTypes = {
     extraColumns: PropTypes.array,
     intentColumns: PropTypes.arrayOf(PropTypes.object),
     onSwitchCanonical: PropTypes.func.isRequired,
-    conditionalRowFormatter: PropTypes.func.isRequired,
+    conditionalRowFormatter: PropTypes.func,
     className: PropTypes.string,
 };
 
 NluDataTable.defaultProps = {
+    conditionalRowFormatter: null,
     hideHeader: false,
     extraColumns: [],
     intentColumns: null,

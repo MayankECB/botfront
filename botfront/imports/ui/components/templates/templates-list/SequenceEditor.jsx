@@ -107,7 +107,7 @@ SequenceEditor.propTypes = {
     onChange: PropTypes.func.isRequired,
     onDeleteVariation: PropTypes.func.isRequired,
     name: PropTypes.string.isRequired,
-    onChangePayloadType: PropTypes.string.isRequired,
+    onChangePayloadType: PropTypes.func.isRequired,
 };
 
 export default SequenceEditor;
