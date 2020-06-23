@@ -173,5 +173,10 @@ if (Meteor.isServer) {
                 throw error;
             }
         },
+
+        async reportCrash(error) {
+            check(error, String);
+            return { reported: false };
+        },
     });
 }
